@@ -52,6 +52,11 @@ docker compose up -d --build
 - App: http://localhost:8000
 - Postgres: localhost:5432
 
+### API Documentation
+
+- Swagger UI (interactive): http://localhost:8000/swagger
+- OpenAPI JSON: http://localhost:8000/openapi.json
+
 The app container uses `DATABASE_URL=postgresql+psycopg://postgres:postgres@postgres:5432/closefriend` to connect to the DB service.
 
 ### Environment Variables

@@ -16,7 +16,22 @@ from .deps import get_current_user
 
 settings = get_settings()
 
-app = FastAPI(title="CloseFriend Backend")
+# OpenAPI / Swagger configuration
+openapi_tags = [
+    {"name": "Auth", "description": "Authentication and registration endpoints"},
+    {"name": "Dashboard", "description": "User dashboard and close-friend events"},
+]
+
+app = FastAPI(
+    title="CloseFriend Backend",
+    description="CloseFriend backend API — authentication, verification and dashboard endpoints.",
+    version="1.0.0",
+    docs_url="/swagger",        # Swagger UI
+    redoc_url="/redoc",         # ReDoc UI
+    openapi_url="/openapi.json",
+    contact={"name": "CloseFriend Team", "email": "dev@closefriend.local"},
+    openapi_tags=openapi_tags,
+)
 
 # CORS
 origins = settings.cors_origin_list
@@ -50,7 +65,7 @@ def _generate_code(length: int = 6) -> str:
     return "".join(str(random.randint(0, 9)) for _ in range(length))
 
 # Auth routes
-@app.post("/auth/register/start", response_model=dict)
+@app.post("/auth/register/start", response_model=dict, tags=["Auth"])
 def register_start(payload: schemas.RegisterStartIn, db: Session = Depends(get_db)):
     try:
         validate_email(str(payload.email))
@@ -78,7 +93,7 @@ def register_start(payload: schemas.RegisterStartIn, db: Session = Depends(get_d
     send_verification_code(user.email, code)
     return {"message": "Verification code sent"}
 
-@app.post("/auth/register/verify", response_model=schemas.Token)
+@app.post("/auth/register/verify", response_model=schemas.Token, tags=["Auth"])
 def register_verify(payload: schemas.RegisterVerifyIn, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == str(payload.email)).first()
     if not user:
@@ -105,7 +120,7 @@ def register_verify(payload: schemas.RegisterVerifyIn, db: Session = Depends(get
     token = create_access_token(user.id)
     return schemas.Token(access_token=token)
 
-@app.post("/auth/login", response_model=schemas.Token)
+@app.post("/auth/login", response_model=schemas.Token, tags=["Auth"])
 def login(payload: schemas.LoginIn, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == str(payload.email)).first()
     if not user or not user.password_hash:
@@ -118,7 +133,7 @@ def login(payload: schemas.LoginIn, db: Session = Depends(get_db)):
     token = create_access_token(user.id)
     return schemas.Token(access_token=token)
 
-@app.post("/auth/google", response_model=schemas.Token)
+@app.post("/auth/google", response_model=schemas.Token, tags=["Auth"])
 def google_sign_in(payload: schemas.GoogleSignInIn, db: Session = Depends(get_db)):
     try:
         info = verify_google_id_token(payload.id_token)
@@ -146,7 +161,7 @@ def google_sign_in(payload: schemas.GoogleSignInIn, db: Session = Depends(get_db
     token = create_access_token(user.id)
     return schemas.Token(access_token=token)
 
-@app.post("/auth/telegram", response_model=schemas.Token)
+@app.post("/auth/telegram", response_model=schemas.Token, tags=["Auth"])
 def telegram_sign_in(payload: schemas.TelegramSignInIn, db: Session = Depends(get_db)):
     data = payload.model_dump()
     from .auth import verify_telegram_auth
@@ -173,7 +188,7 @@ def telegram_sign_in(payload: schemas.TelegramSignInIn, db: Session = Depends(ge
     return schemas.Token(access_token=token)
 
 # Dashboard
-@app.post("/dashboard/close-friends", response_model=schemas.CloseFriendEventOut)
+@app.post("/dashboard/close-friends", response_model=schemas.CloseFriendEventOut, tags=["Dashboard"])
 async def add_close_friends(
     payload: schemas.CloseFriendsIn,
     current_user: models.User = Depends(get_current_user),
