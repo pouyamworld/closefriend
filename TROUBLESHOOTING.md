@@ -112,7 +112,9 @@ sudo -u postgres psql -c "DROP USER closefriend_user;"
 
 ---
 
-### 7. سرویس start نمی‌شود
+### 7. سرویس start نمی‌شود (Type=notify error)
+
+**علت:** تنظیمات اشتباه systemd یا gunicorn نصب نشده.
 
 **راه‌حل:**
 ```bash
@@ -122,7 +124,35 @@ sudo journalctl -u closefriend -n 50
 # تست دستی
 cd /var/www/closefriend
 source .venv/bin/activate
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+# بررسی gunicorn
+which gunicorn
+.venv/bin/gunicorn --version
+
+# اگر gunicorn نصب نیست
+.venv/bin/pip install gunicorn
+
+# تست اجرا
+.venv/bin/gunicorn app.main:app --bind 127.0.0.1:8000
+
+# یا با uvicorn
+.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+اگر با uvicorn کار کرد، سرویس systemd را تغییر دهید:
+```bash
+sudo nano /etc/systemd/system/closefriend.service
+```
+
+تغییر خط ExecStart به:
+```ini
+ExecStart=/var/www/closefriend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+سپس:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart closefriend
 ```
 
 ---

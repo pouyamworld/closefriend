@@ -16,15 +16,35 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+    # Security: Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    # Security: Read-only root filesystem where possible
+    security_opt:
+      - no-new-privileges:true
+    # Security: Restrict capabilities
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
 
   app:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile
     container_name: closefriend-app
     restart: unless-stopped
     env_file:
       - .env
     environment:
-      # Override DSN to use the postgres service hostname inside the compose network
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://postgres:postgres@postgres:5432/closefriend}
       SECRET_KEY: ${SECRET_KEY:-change-me}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
@@ -35,9 +55,52 @@ services:
       ENVIRONMENT: ${ENVIRONMENT:-dev}
     ports:
       - "8000:8000"
-    # depends_on:
-    #   postgres:
-    #     condition: service_healthy
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Security: Resource limits - CRITICAL to prevent crypto mining
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'        # Maximum 50% of one CPU core
+          memory: 512M       # Maximum 512MB RAM
+        reservations:
+          cpus: '0.1'        # Reserve 10% CPU
+          memory: 128M       # Reserve 128MB RAM
+    # Security: Read-only root filesystem (app writes only to /tmp)
+    read_only: true
+    tmpfs:
+      - /tmp
+    # Security: Drop all capabilities and add only what's needed
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE  # Only for binding to ports
+    # Security: Additional protections
+    security_opt:
+      - no-new-privileges:true
+    # Security: Run as non-root (defined in Dockerfile)
+    user: "1000:1000"
+    # Security: Prevent network abuse
+    networks:
+      - closefriend-network
+    # Health check
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8000/openapi.json || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+# Security: Isolated network
+networks:
+  closefriend-network:
+    driver: bridge
+    internal: false  # Allow external access for API
+    ipam:
+      config:
+        - subnet: 172.25.0.0/24
 
 volumes:
   pgdata:
+    driver: local
