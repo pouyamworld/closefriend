@@ -33,14 +33,26 @@ echo ""
 
 # Update system
 echo -e "${YELLOW}[1/8] Updating system packages...${NC}"
-sudo apt-get update -qq
-sudo apt-get upgrade -y -qq
+sudo apt-get update -q
+sudo apt-get upgrade -y -q
 
 # Install dependencies
 echo -e "${YELLOW}[2/8] Installing system dependencies...${NC}"
-sudo apt-get install -y -qq \
-    python3.11 \
-    python3.11-venv \
+
+# Detect available Python version
+if apt-cache show python3.12 > /dev/null 2>&1; then
+    PYTHON_VERSION="3.12"
+elif apt-cache show python3.11 > /dev/null 2>&1; then
+    PYTHON_VERSION="3.11"
+else
+    PYTHON_VERSION="3"
+fi
+
+echo -e "${YELLOW}   Installing Python ${PYTHON_VERSION}...${NC}"
+
+sudo apt-get install -y -q \
+    python${PYTHON_VERSION} \
+    python${PYTHON_VERSION}-venv \
     python3-pip \
     postgresql \
     postgresql-contrib \
@@ -49,9 +61,11 @@ sudo apt-get install -y -qq \
     python3-certbot-nginx \
     git \
     curl \
-    ufw
+    ufw \
+    build-essential \
+    libpq-dev
 
-echo -e "${GREEN}✓ System dependencies installed${NC}"
+echo -e "${GREEN}✓ System dependencies installed (Python ${PYTHON_VERSION})${NC}"
 
 # Setup PostgreSQL
 echo -e "${YELLOW}[3/8] Configuring PostgreSQL...${NC}"
@@ -103,14 +117,15 @@ fi
 echo -e "${YELLOW}[5/8] Setting up Python virtual environment...${NC}"
 
 if [ ! -d "$APP_DIR/.venv" ]; then
-    python3.11 -m venv .venv
+    python${PYTHON_VERSION} -m venv .venv
 fi
 
 source .venv/bin/activate
-pip install --upgrade pip -q
-pip install -r requirements.txt -q
+pip install --upgrade pip -q 2>&1 | grep -v "already satisfied" || true
+echo -e "${YELLOW}   Installing Python packages (this may take a few minutes)...${NC}"
+pip install -r requirements.txt -q 2>&1 | grep -v "already satisfied" || true
 
-echo -e "${GREEN}✓ Python environment ready${NC}"
+echo -e "${GREEN}✓ Python environment ready (Python ${PYTHON_VERSION})${NC}"
 
 # Generate secret key
 echo -e "${YELLOW}[6/8] Generating configuration...${NC}"

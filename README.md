@@ -14,9 +14,44 @@
 
 ---
 
+## 🚀 Quick Server Deployment (Automated)
+
+**For Ubuntu/Debian servers - One command setup:**
+
+```bash
+git clone https://github.com/pouyamworld/closefriend.git
+cd closefriend
+./setup-server.sh
+```
+
+This script automatically:
+- ✅ Installs Python 3.11, PostgreSQL, Nginx
+- ✅ Creates and configures database
+- ✅ Sets up Python virtual environment
+- ✅ Generates secure configuration
+- ✅ Creates systemd service
+- ✅ Configures Nginx reverse proxy
+- ✅ Sets up firewall
+- ✅ (Optional) Installs SSL certificate
+
+📖 **Full deployment guide:** See [DEPLOYMENT.md](DEPLOYMENT.md)
+
+---
+
 ## Setup and Deployment
 
-### Option 1: Local Development (without Docker)
+### Option 1: Automated Server Setup (Production)
+
+**Recommended for production deployment on Ubuntu/Debian servers.**
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for complete instructions.
+
+Quick start:
+```bash
+./setup-server.sh
+```
+
+### Option 2: Local Development (without Docker)
 
 This is the recommended way to run and deploy the project.
 
