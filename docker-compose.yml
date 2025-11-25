@@ -25,16 +25,18 @@ services:
         reservations:
           cpus: '0.25'
           memory: 256M
-    # Security: Read-only root filesystem where possible
+    # Security: Additional protections
     security_opt:
       - no-new-privileges:true
-    # Security: Restrict capabilities
+    # Security: Restrict capabilities (postgres needs to write to volumes)
     cap_drop:
       - ALL
     cap_add:
       - CHOWN
       - SETUID
       - SETGID
+      - DAC_OVERRIDE
+      - FOWNER
 
   app:
     build: 
