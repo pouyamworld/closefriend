@@ -14,6 +14,21 @@
 
 ---
 
+## ⚠️ Security Notice - Docker
+
+**IMPORTANT:** If you previously used Docker and experienced high CPU usage (700%+) or crypto mining activity, please read [DOCKER-SECURITY.md](DOCKER-SECURITY.md) immediately.
+
+The Dockerfile and docker-compose.yml have been updated with critical security fixes:
+- ✅ Resource limits (CPU capped at 50%)
+- ✅ Non-root user execution
+- ✅ Read-only filesystem
+- ✅ Dropped all dangerous capabilities
+- ✅ Removed curl/wget to prevent malware downloads
+
+**Recommended:** Use `./setup-server.sh` instead of Docker for production.
+
+---
+
 ## 🚀 Quick Server Deployment (Automated)
 
 **For Ubuntu/Debian servers - One command setup:**
@@ -25,7 +40,7 @@ cd closefriend
 ```
 
 This script automatically:
-- ✅ Installs Python 3.11, PostgreSQL, Nginx
+- ✅ Installs Python 3.11/3.12, PostgreSQL, Nginx
 - ✅ Creates and configures database
 - ✅ Sets up Python virtual environment
 - ✅ Generates secure configuration
@@ -224,26 +239,44 @@ sudo certbot --nginx -d yourdomain.com
 
 ---
 
-### Option 3: Docker Setup (alternative)
+### Option 3: Docker Setup (⚠️ Not Recommended for Production)
 
-If you prefer Docker for local development:
+**Security Warning:** Docker setup has been secured but may still be vulnerable. Use `setup-server.sh` for production.
+
+If you must use Docker, we've added critical security measures:
+- CPU限制 at 50% of one core
+- Memory limit of 512MB
+- Read-only filesystem
+- Non-root user execution
+- No dangerous capabilities
+
+See [DOCKER-SECURITY.md](DOCKER-SECURITY.md) for details.
+
+#### Secure Docker deployment:
+
+```bash
+# IMPORTANT: Pull latest security updates first
+git pull origin main
+
+# Clean rebuild (no cache)
+docker compose down -v
+docker system prune -a --volumes --force
+docker compose build --no-cache
+docker compose up -d
+
+# Monitor for suspicious activity
+./docker-monitor.sh
+```
 
 #### Start only PostgreSQL:
 ```bash
 docker compose up -d postgres
 ```
 
-Then run the app locally:
+Then run the app locally (recommended):
 ```bash
 source .venv/bin/activate
 uvicorn app.main:app --reload
-```
-
-#### Full Docker setup (app + postgres):
-```bash
-cp .env.example .env
-# Edit .env with your values
-docker compose up -d --build
 ```
 
 ---
