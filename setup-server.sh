@@ -120,10 +120,21 @@ if [ ! -d "$APP_DIR/.venv" ]; then
     python${PYTHON_VERSION} -m venv .venv
 fi
 
+# Activate and use venv's pip
 source .venv/bin/activate
-pip install --upgrade pip -q 2>&1 | grep -v "already satisfied" || true
+
+# Upgrade pip using venv's pip
+echo -e "${YELLOW}   Upgrading pip...${NC}"
+.venv/bin/pip install --upgrade pip setuptools wheel 2>&1 | grep -v "already satisfied" || true
+
 echo -e "${YELLOW}   Installing Python packages (this may take a few minutes)...${NC}"
-pip install -r requirements.txt -q 2>&1 | grep -v "already satisfied" || true
+.venv/bin/pip install -r requirements.txt 2>&1 | grep -v "already satisfied" || true
+
+# Verify critical packages
+if ! .venv/bin/python -c "import fastapi, uvicorn, gunicorn" 2>/dev/null; then
+    echo -e "${YELLOW}   Reinstalling critical packages...${NC}"
+    .venv/bin/pip install fastapi uvicorn gunicorn
+fi
 
 echo -e "${GREEN}✓ Python environment ready (Python ${PYTHON_VERSION})${NC}"
 
@@ -162,11 +173,11 @@ After=network.target postgresql.service
 Requires=postgresql.service
 
 [Service]
-Type=notify
+Type=exec
 User=$USER
 Group=$USER
 WorkingDirectory=$APP_DIR
-Environment="PATH=$APP_DIR/.venv/bin"
+Environment="PATH=$APP_DIR/.venv/bin:/usr/local/bin:/usr/bin:/bin"
 EnvironmentFile=$APP_DIR/.env
 ExecStart=$APP_DIR/.venv/bin/gunicorn app.main:app \\
     --workers 4 \\
@@ -177,6 +188,8 @@ ExecStart=$APP_DIR/.venv/bin/gunicorn app.main:app \\
     --log-level info
 Restart=always
 RestartSec=10
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
@@ -189,7 +202,23 @@ sudo chown $USER:$USER /var/log/closefriend
 # Reload systemd
 sudo systemctl daemon-reload
 sudo systemctl enable closefriend
-sudo systemctl start closefriend
+
+# Try to start the service
+echo -e "${YELLOW}   Starting service...${NC}"
+if ! sudo systemctl start closefriend; then
+    echo -e "${RED}⚠️  Service failed to start. Checking logs...${NC}"
+    sudo journalctl -u closefriend -n 20 --no-pager
+    echo ""
+    echo -e "${YELLOW}Trying to run manually to see the error...${NC}"
+    cd $APP_DIR
+    source .venv/bin/activate
+    .venv/bin/python -c "from app.main import app; print('✓ App imports successfully')" || {
+        echo -e "${RED}Error importing app. Checking dependencies...${NC}"
+        .venv/bin/pip list | grep -E "fastapi|uvicorn|gunicorn"
+    }
+else
+    echo -e "${GREEN}✓ Service started successfully${NC}"
+fi
 
 echo -e "${GREEN}✓ Systemd service created and started${NC}"
 
