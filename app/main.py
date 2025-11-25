@@ -14,8 +14,7 @@ from .auth import (
     hash_password,
     verify_password,
     create_access_token,
-    verify_google_id_token,
-    pwd_context
+    verify_google_id_token
 )
 from .email_service import send_verification_code
 from .deps import get_current_user
@@ -134,7 +133,7 @@ def register_start(payload: schemas.RegisterStartIn, db: Session = Depends(get_d
 
     # Create verification code
     code = _generate_code()
-    code_hash = pwd_context.hash(code)
+    code_hash = hash_password(code)
     expires_at = datetime.utcnow() + timedelta(minutes=10)
 
     v = models.EmailVerificationCode(
@@ -170,7 +169,7 @@ def register_verify(payload: schemas.RegisterVerifyIn, db: Session = Depends(get
     if not code_row or code_row.expires_at < datetime.utcnow():
         raise HTTPException(status_code=400, detail="Code expired or not found")
 
-    if not pwd_context.verify(payload.code, code_row.code_hash):
+    if not verify_password(payload.code, code_row.code_hash):
         raise HTTPException(status_code=400, detail="Invalid code")
 
     # Mark user verified
