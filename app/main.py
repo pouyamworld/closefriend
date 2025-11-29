@@ -293,10 +293,10 @@ async def add_close_friends(
         )
         db.add(event)
         db.commit()
-        return {"message": "دیتابیس ذخیره شد"}
+        return {"message": "Saved to database"}
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"خطا در ذخیره‌سازی: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Database save error: {str(e)}")
 
 
 @app.get("/dashboard/non-besties", tags=["Dashboard"])
