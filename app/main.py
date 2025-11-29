@@ -300,9 +300,14 @@ async def add_close_friends(
 
 
 @app.get("/dashboard/non-besties", tags=["Dashboard"])
-async def get_non_besties(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def get_non_besties(
+    skip: int = 0,
+    limit: int = 10,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     event = db.query(models.CloseFriendEvent).filter(models.CloseFriendEvent.user_id == current_user.id).order_by(models.CloseFriendEvent.created_at.desc()).first()
     if not event or not event.friend_ids:
         return []
     non_besties = [f for f in event.friend_ids if not f.get("is_bestie")]
-    return non_besties
+    return non_besties[skip:skip+limit]
