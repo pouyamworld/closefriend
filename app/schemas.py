@@ -43,8 +43,15 @@ class TelegramSignInIn(BaseModel):
     hash: str
 
 # Dashboard
+
+# ورودی جدید برای close friends
+class CloseFriendItemIn(BaseModel):
+    acc_id: str
+    image_url: str
+    is_bestie: bool
+
 class CloseFriendsIn(BaseModel):
-    friend_ids: List[str]
+    friends: list[CloseFriendItemIn]
 
 class CloseFriendEventOut(BaseModel):
     id: int

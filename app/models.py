@@ -38,3 +38,4 @@ class CloseFriendEvent(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
 
     user = relationship("User", back_populates="close_friend_events")
+ 

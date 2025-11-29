@@ -286,11 +286,23 @@ async def add_close_friends(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    event = models.CloseFriendEvent(
-        user_id=current_user.id,
-        friend_ids={"friend_ids": payload.friend_ids},
-    )
-    db.add(event)
-    db.commit()
-    db.refresh(event)
-    return event
+    try:
+        event = models.CloseFriendEvent(
+            user_id=current_user.id,
+            friend_ids=[friend.model_dump() for friend in payload.friends],
+        )
+        db.add(event)
+        db.commit()
+        return {"message": "دیتابیس ذخیره شد"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"خطا در ذخیره‌سازی: {str(e)}")
+
+
+@app.get("/dashboard/non-besties", tags=["Dashboard"])
+async def get_non_besties(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    event = db.query(models.CloseFriendEvent).filter(models.CloseFriendEvent.user_id == current_user.id).order_by(models.CloseFriendEvent.created_at.desc()).first()
+    if not event or not event.friend_ids:
+        return []
+    non_besties = [f for f in event.friend_ids if not f.get("is_bestie")]
+    return non_besties
